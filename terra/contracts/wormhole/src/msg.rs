@@ -1,4 +1,4 @@
-use cosmwasm_std::{HumanAddr, Uint128};
+use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -15,15 +15,15 @@ pub struct InitMsg {
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
     SubmitVAA {
-        vaa: Vec<u8>,
+        vaa: Binary,
     },
     RegisterAssetHook {
-        asset_id: Vec<u8>,
+        asset_id: Binary,
     },
     LockAssets {
         asset: HumanAddr,
         amount: Uint128,
-        recipient: Vec<u8>,
+        recipient: Binary,
         target_chain: u8,
         nonce: u32,
     },
@@ -31,9 +31,9 @@ pub enum HandleMsg {
         target_chain: u8,
         token_chain: u8,
         token_decimals: u8,
-        token: Vec<u8>,
-        sender: Vec<u8>,
-        recipient: Vec<u8>,
+        token: Binary,
+        sender: Binary,
+        recipient: Binary,
         amount: Uint128,
         nonce: u32,
     },

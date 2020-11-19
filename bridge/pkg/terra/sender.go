@@ -29,7 +29,7 @@ type SubmitVAAMsg struct {
 }
 
 type SubmitVAAParams struct {
-	VAA JSONArraySlice `json:"vaa"`
+	VAA byte[] `json:"vaa"`
 }
 
 // SubmitVAA Prepares transaction with signed VAA and sends it to the Terra blockchain

@@ -68,8 +68,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> StdResult<HandleResponse> {
     match msg {
-        HandleMsg::SubmitVAA { vaa } => handle_submit_vaa(deps, env, &vaa),
-        HandleMsg::RegisterAssetHook { asset_id } => handle_register_asset(deps, env, &asset_id),
+        HandleMsg::SubmitVAA { vaa } => handle_submit_vaa(deps, env, vaa),
+        HandleMsg::RegisterAssetHook { asset_id } => handle_register_asset(deps, env, asset_id),
         HandleMsg::LockAssets {
             asset,
             recipient,
@@ -104,8 +104,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 fn handle_submit_vaa<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    data: &[u8],
+    data: Binary,
 ) -> StdResult<HandleResponse> {
+    let data: &[u8] = data.as_slice();
 
     let state = config_read(&deps.storage).load()?;
     if !state.is_active {
@@ -211,8 +212,10 @@ fn handle_submit_vaa<S: Storage, A: Api, Q: Querier>(
 fn handle_register_asset<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    asset_id: &[u8],
+    asset_id: Binary,
 ) -> StdResult<HandleResponse> {
+    let asset_id: &[u8] = asset_id.as_slice();
+
     let mut bucket = wrapped_asset(&mut deps.storage);
     let result = bucket.load(asset_id);
     match result {
@@ -268,7 +271,7 @@ fn vaa_update_guardian_set<S: Storage, A: Api, Q: Querier>(
     let mut pos = 5;
     for _ in 0..len {
         new_guardian_set.addresses.push(GuardianAddress {
-            bytes: data[pos..pos + 20].to_vec(),
+            bytes: Binary::from(data[pos..pos + 20].to_vec()),
         });
         pos += 20;
     }
@@ -379,7 +382,7 @@ fn vaa_transfer<S: Storage, A: Api, Q: Querier>(
                         init_hook: Some(InitHook {
                             contract_addr: env.contract.address,
                             msg: to_binary(&HandleMsg::RegisterAssetHook {
-                                asset_id: asset_id.to_vec(),
+                                asset_id: Binary::from(asset_id.to_vec()),
                             })?,
                         }),
                     })?,
@@ -417,7 +420,7 @@ fn handle_lock_assets<S: Storage, A: Api, Q: Querier>(
     env: Env,
     asset: HumanAddr,
     amount: Uint128,
-    recipient: Vec<u8>,
+    recipient: Binary,
     target_chain: u8,
     nonce: u32,
 ) -> StdResult<HandleResponse> {
@@ -492,8 +495,10 @@ fn handle_lock_assets<S: Storage, A: Api, Q: Querier>(
             target_chain,
             token_chain: asset_chain,
             token_decimals: decimals,
-            token: asset_address,
-            sender: extend_address_to_32(&deps.api.canonical_address(&env.message.sender)?),
+            token: Binary::from(asset_address),
+            sender: Binary::from(extend_address_to_32(
+                &deps.api.canonical_address(&env.message.sender)?,
+            )),
             recipient,
             amount,
             nonce,
@@ -512,9 +517,9 @@ fn handle_tokens_locked(
     target_chain: u8,
     token_chain: u8,
     token_decimals: u8,
-    token: Vec<u8>,
-    sender: Vec<u8>,
-    recipient: Vec<u8>,
+    token: Binary,
+    sender: Binary,
+    recipient: Binary,
     amount: Uint128,
     nonce: u32,
 ) -> StdResult<HandleResponse> {
@@ -525,9 +530,9 @@ fn handle_tokens_locked(
             log("locked.target_chain", target_chain),
             log("locked.token_chain", token_chain),
             log("locked.token_decimals", token_decimals),
-            log("locked.token", hex::encode(token)),
-            log("locked.sender", hex::encode(sender)),
-            log("locked.recipient", hex::encode(recipient)),
+            log("locked.token", hex::encode(token.as_slice())),
+            log("locked.sender", hex::encode(sender.as_slice())),
+            log("locked.recipient", hex::encode(recipient.as_slice())),
             log("locked.amount", amount),
             log("locked.nonce", nonce),
         ],
@@ -595,7 +600,7 @@ fn keys_equal(a: &VerifyKey, b: &GuardianAddress) -> bool {
     if a.len() != b.len() {
         return false;
     }
-    for (ai, bi) in a.iter().zip(b.iter()) {
+    for (ai, bi) in a.iter().zip(b.as_slice().iter()) {
         if ai != bi {
             return false;
         }
@@ -646,7 +651,7 @@ mod tests {
         vaa: &str,
     ) -> StdResult<HandleResponse> {
         let msg = HandleMsg::SubmitVAA {
-            vaa: hex::decode(vaa).expect("Decoding failed"),
+            vaa: Binary::from(hex::decode(vaa).expect("Decoding failed")),
         };
         let env = mock_env(&HumanAddr::from("creator"), &[]);
 
